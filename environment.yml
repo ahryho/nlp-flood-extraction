@@ -1,0 +1,12 @@
+name: nlp_flood_extract_env
+channels:
+  - conda-forge
+dependencies:
+  - pandas
+  - nltk
+  - openai
+  - bs4
+  - pip
+  - pip:
+    - newspaper3k
+ 
