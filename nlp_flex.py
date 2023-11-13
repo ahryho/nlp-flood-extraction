@@ -7,10 +7,12 @@ def nlp_flex():
     extractor = ContentExtractor()
 
     # Read data
-    data_df = extractor.read_data("your_data.csv")
+    in_fn = 'data/collection_articles.csv'
+    data_df = extractor.read_data(in_fn)
 
     # Extract content
-    extracted_df = extractor.extract_content(data_df, num_processes=None, out_fn="output.csv")
+    out_fn = "output/collection_articles_modified.csv"
+    extracted_df = extractor.extract_content(data_df, num_processes=None, out_fn=out_fn)
 
     # Filter valid articles
     # filtered_df = extractor.filter_scraped_data(extracted_df)
