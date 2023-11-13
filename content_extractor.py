@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 # Timeout in seconds
 CONNECT_TIMEOUT = 5
-READ_TIMEOUT = 10
+READ_TIMEOUT = 120
 
 # User agent for HTTP requests
 USER_AGENT = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
