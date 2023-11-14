@@ -1,21 +1,74 @@
 # nlp_flex.py
 
+import configparser
+import argparse
+import logging
+
 from content_extractor import ContentExtractor
+from utils import configure_logging
 
-def nlp_flex():
+def nlp_flex(config_file_path):
+    """
+    Perform URL ontent extraction based on the specified mode in the configuration file.
 
+    Parameters:
+        config_file_path (str): The path to the configuration file.
+
+    Returns:
+        None
+    """
+    # Configure logging and get the log file path
+    log_file = configure_logging()
+    
+    # Read configuration from the file
+    config = configparser.ConfigParser()
+    config.read(config_file_path)
+
+    # Get configuration options
+    input_filename = config.get('General', 'input_filename')
+    output_filename = config.get('General', 'output_filename')
+    output_filename = None if output_filename == "None" else output_filename
+    mode = config.get('General', 'mode')
+    num_processes = config.getint('General', 'num_processes')
+    url_col_name = config.get('General', 'url_col_name')
+
+    # Initialize ContentExtractor
     extractor = ContentExtractor()
-
+    
     # Read data
-    in_fn = 'data/collection_articles.csv'
-    data_df = extractor.read_data(in_fn)
+    data_df = extractor.read_data(input_filename, url_col_name=url_col_name)
+    
+    if mode == 'extractor':
+        # Mode: Extractor
+        # Extract content using ContentExtractor
+        extractor.extract_content(data_df[:2], num_processes=num_processes, out_fn=output_filename)
 
-    # Extract content
-    out_fn = "output/collection_articles_modified.csv"
-    extracted_df = extractor.extract_content(data_df, num_processes=None, out_fn=out_fn)
+    elif mode == 'openai':
+        # Mode: OpenAI
+        # Filter valid articles from the data
+        filtered_df = extractor.filter_scraped_data(data_df)
 
-    # Filter valid articles
-    # filtered_df = extractor.filter_scraped_data(extracted_df)
+        # Extract flood events using OpenAI
+        extractor.extract_events_chatopenai(filtered_df, out_fn=output_filename)
 
+    elif mode == 'all':
+        # Mode: All
+        # Extract content, filter valid articles, and extract events
+        extracted_df = extractor.extract_content(data_df[:5], num_processes=num_processes)
+        filtered_df = extractor.filter_scraped_data(extracted_df)
+
+        # Extract flood events using OpenAI
+        extractor.extract_events_chatopenai(filtered_df, out_fn=output_filename)
+    
+    # Log the location of the log file
+    logging.info(f"Log file created at: {log_file}")
+         
 if __name__ == "__main__":
-    nlp_flex()
+    # Define command-line arguments
+    parser = argparse.ArgumentParser(description="NLP FLood EXtraction Tool")
+    parser.add_argument("--config", required=True, help="the path to the configuration file")
+    
+    # Parse command-line arguments
+    args = parser.parse_args()
+    
+    nlp_flex(args.config)
