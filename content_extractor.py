@@ -233,7 +233,7 @@ class ContentExtractor:
         try:
             logging.info("Saving results ...")
             if out_fn is not None:
-                df.to_csv(out_fn, index=False)
+                df.to_csv(out_fn, index=False, sep='|')
             else:
                 if not os.path.exists(OUTPUT_FOLDER_PATH): 
                     os.makedirs(OUTPUT_FOLDER_PATH)
@@ -242,7 +242,7 @@ class ContentExtractor:
                 current_datetime = datetime.now().strftime('%Y-%m-%d_%H%M%S') 
                 out_fn = f"extracted_url_content_{current_datetime}.csv"
                 out_fn = os.path.join(OUTPUT_FOLDER_PATH, out_fn)
-                df.to_csv(out_fn, index=False)
+                df.to_csv(out_fn, index=False, sep='|')
             logging.info("Saved.")
         except Exception as e:
             logging.error(f"An error occurred: {str(e)}")
@@ -336,7 +336,7 @@ class ContentExtractor:
             quest1 = "1. Did a flood event happen? (Yes or No only)"
             quest2 = "2. If a flood event happened, what is its name? (Name only or Unknown)"
             quest3 = "3. If a flood event happened, when did it happen? (YYYY-MM only or Unknown)"
-            quest4 = "4. If a flood event happened, where did it happen? (Name of the place, city, state, country)"
+            quest4 = "4. If a flood event happened, where did it happen? (Name of the place, city, state, country, or Uknown)"
             quest5 = "5. If a flood event happened, how many people died? (Number only or Unknown)"
             quest6 = "6. If a flood event happened, how many people were evacuated? (Number only or Unknown)"
             
@@ -422,7 +422,7 @@ class ContentExtractor:
             # Save results to a CSV file if an output filename is provided
             logging.info("Saving results ...")
             if out_fn is not None:
-                results_df.to_csv(out_fn, index=False)
+                results_df.to_csv(out_fn, index=False, sep='|')
             else:
                 if not os.path.exists(OUTPUT_FOLDER_PATH): 
                     os.makedirs(OUTPUT_FOLDER_PATH)
@@ -431,7 +431,7 @@ class ContentExtractor:
                 current_datetime = datetime.now().strftime('%Y-%m-%d_%H%M%S') 
                 out_fn = f"openai_results_{current_datetime}.csv"
                 out_fn = os.path.join(OUTPUT_FOLDER_PATH, out_fn)
-                results_df.to_csv(out_fn, index=False)
+                results_df.to_csv(out_fn, index=False, sep='|')
             logging.info("Saved.")
 
         except Exception as e:
