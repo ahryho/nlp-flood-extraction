@@ -16,7 +16,7 @@ class TestDataReading(unittest.TestCase):
 
     def tearDown(self):
         # Clean up any created files after each test
-        for file_name in ['test_data_utf8.csv', 'test_data_missing_column.csv', 'test_data_empty_file.csv']:
+        for file_name in ['test_data_utf8.csv', 'test_data_cp1252.csv', 'test_data_missing_column.csv', 'test_data_empty_file.csv']:
             if os.path.exists(file_name):
                 os.remove(file_name)
 
@@ -40,7 +40,7 @@ class TestDataReading(unittest.TestCase):
         # Test handling missing URL column
         file_name = "test_data_missing_column.csv"
         data = "InvalidColumnName|Description\nhttps://example.com|Sample data"
-        with open(file_name, "w", encoding="utf-8") as file:
+        with open(file_name, "w", encoding="cp1252") as file:
             file.write(data)
 
         # Ensure the method raises a ValueError with the expected message
@@ -51,7 +51,7 @@ class TestDataReading(unittest.TestCase):
     def test_read_data_empty_file(self):
         # Test handling empty CSV file
         file_name = "test_data_empty_file.csv"
-        with open(file_name, "w", encoding="utf-8") as file:
+        with open(file_name, "w", encoding="cp1252") as file:
             file.write("")
 
         # Ensure the method raises a ValueError with the expected message
