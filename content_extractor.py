@@ -13,6 +13,7 @@ from nltk.tokenize import word_tokenize
 import multiprocessing
 import openai
 import logging
+from datetime import datetime
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -25,8 +26,12 @@ READ_TIMEOUT = 120
 # User agent for HTTP requests
 USER_AGENT = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
 
+# Output folder results
+OUTPUT_FOLDER_PATH = "output"
+
 # Set OpenAI API key
-openai.api_key = "sk-..."
+# openai.api_key = "sk-..."
+openai.api_key = "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"
 
 # Override SSL verification settings
 old_merge_environment_settings = requests.Session.merge_environment_settings
@@ -226,9 +231,19 @@ class ContentExtractor:
         df['Summary'], df['New_Content'], df['Is_Article'] = zip(*results)
 
         try:
+            logging.info("Saving results ...")
             if out_fn is not None:
-                logging.info("Saving results ...")
                 df.to_csv(out_fn, index=False)
+            else:
+                if not os.path.exists(OUTPUT_FOLDER_PATH): 
+                    os.makedirs(OUTPUT_FOLDER_PATH)
+                
+                # Get the current date and time    
+                current_datetime = datetime.now().strftime('%Y-%m-%d_%H%M%S') 
+                out_fn = f"extracted_url_content_{current_datetime}.csv"
+                out_fn = os.path.join(OUTPUT_FOLDER_PATH, out_fn)
+                df.to_csv(out_fn, index=False)
+            logging.info("Saved.")
         except Exception as e:
             logging.error(f"An error occurred: {str(e)}")
             logging.error("Data aren't saved but returned")
@@ -283,16 +298,17 @@ class ContentExtractor:
             openai_content_dict = json.loads(openai_content)
             openai_content_df = pd.DataFrame([openai_content_dict])
             
-            column_mapping = {
-                "Question1": "is_happened",
-                "Question2": "event_name_en",
-                "Question3": "date",
-                "Question4": "location",
-                "Question5": "death",
-                "Question6": "evacuation"
-            }
+            # column_mapping = {
+            #     "Question1": "is_happened",
+            #     "Question2": "event_name_en",
+            #     "Question3": "date",
+            #     "Question4": "location",
+            #     "Question5": "death",
+            #     "Question6": "evacuation"
+            # }
             
-            openai_content_df.rename(columns=column_mapping, inplace=True)
+            # openai_content_df.rename(columns=column_mapping, inplace=True)
+            openai_content_df.columns = ["is_happened", "event_name_en", "date", "location", "death", "evacuation"]
             return openai_content_df
 
         except Exception as e:
@@ -359,7 +375,7 @@ class ContentExtractor:
             logger.error(f"An error occurred during extraction: {str(e)}")
             return pd.DataFrame()  # Return an empty DataFrame in case of an error
 
-    def extract_events_chatopenai(self, df, num_processes=None, openai_model="gpt-3.5-turbo", openai_temp=0.8, openai_max_tokens=100, out_fn=None):
+    def extract_events_chatopenai(self, df, num_processes=None, openai_model="gpt-3.5-turbo", openai_temp=0.8, openai_max_tokens=150, out_fn=None):
         """Extracts information for multiple events using OpenAI API.
 
         Args:
@@ -404,9 +420,19 @@ class ContentExtractor:
 
         try:
             # Save results to a CSV file if an output filename is provided
+            logging.info("Saving results ...")
             if out_fn is not None:
-                logger.info("Saving results ...")
                 results_df.to_csv(out_fn, index=False)
+            else:
+                if not os.path.exists(OUTPUT_FOLDER_PATH): 
+                    os.makedirs(OUTPUT_FOLDER_PATH)
+                
+                # Get the current date and time    
+                current_datetime = datetime.now().strftime('%Y-%m-%d_%H%M%S') 
+                out_fn = f"openai_results_{current_datetime}.csv"
+                out_fn = os.path.join(OUTPUT_FOLDER_PATH, out_fn)
+                results_df.to_csv(out_fn, index=False)
+            logging.info("Saved.")
 
         except Exception as e:
             # Handle exceptions during the saving process
