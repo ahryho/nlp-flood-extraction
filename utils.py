@@ -16,9 +16,9 @@ def configure_logging():
 
     logging.basicConfig(level=logging.INFO)
 
-    # Create a file handler and set the logging level to WARNING
+    # Create a file handler and set the logging level to INFO
     file_handler = logging.FileHandler(log_file)
-    file_handler.setLevel(logging.WARNING)
+    file_handler.setLevel(logging.INFO)
 
     # Create a console handler and set the logging level to INFO
     console_handler = logging.StreamHandler(sys.stdout)
