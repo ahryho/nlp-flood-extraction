@@ -17,7 +17,7 @@ def configure_logging():
     logging.basicConfig(level=logging.INFO)
 
     # Create a file handler and set the logging level to INFO
-    file_handler = logging.FileHandler(log_file)
+    file_handler = logging.FileHandler(log_file, encoding='cp1252')
     file_handler.setLevel(logging.INFO)
 
     # Create a console handler and set the logging level to INFO
