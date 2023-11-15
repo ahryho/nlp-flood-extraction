@@ -275,18 +275,17 @@ class ContentExtractor:
             print(f"An error occurred during data filtering: {str(e)}")
             return pd.DataFrame()  # Return an empty DataFrame in case of an error
 
-    def transform_openai_response_to_df(self, openai_content, openai_model="gpt-3.5-turbo"):
+    def transform_openai_response_to_df(self, openai_content):
         """Transforms OpenAI response into a dataframe.
 
         Args:
             openai_content (str): OpenAI response content.
-            openai_model (str, optional): OpenAI model name. Defaults to "gpt-3.5-turbo".
 
         Returns:
             pd.DataFrame: Dataframe with transformed OpenAI content.
         """
         try:
-            if openai_model == "gpt-3.5-turbo":
+            if self.openai_model == "gpt-3.5-turbo":
                 openai_content = re.sub(r'\n  ', '', openai_content)
             else:
                 pattern = re.compile(r'Answers(\d+): (.+)')
@@ -316,7 +315,7 @@ class ContentExtractor:
             logger.error(f"An error occurred during transformation: {str(e)}")
             return pd.DataFrame()  # Return an empty DataFrame in case of an error
 
-    def extract_single_event_chatopenai(self, url_content, url, openai_model="gpt-3.5-turbo", openai_temp=0.8, openai_max_tokens=100):
+    def extract_single_event_chatopenai(self, url_content, url, openai_model, openai_temp, openai_max_tokens):
         """Extracts information for a single event using OpenAI API.
 
         Args:
@@ -365,7 +364,7 @@ class ContentExtractor:
                 openai_content = response['choices'][0]['text']
 
             logger.info(f"Transforming information from {url}")
-            content_df = self.transform_openai_response_to_df(openai_content, openai_model=openai_model)
+            content_df = self.transform_openai_response_to_df(openai_content)
             content_df["link"] = url
 
             return content_df
@@ -375,7 +374,7 @@ class ContentExtractor:
             logger.error(f"An error occurred during extraction: {str(e)}")
             return pd.DataFrame()  # Return an empty DataFrame in case of an error
 
-    def extract_events_chatopenai(self, df, num_processes=None, openai_model="gpt-3.5-turbo", openai_temp=0.8, openai_max_tokens=150, out_fn=None):
+    def extract_events_chatopenai(self, df, num_processes=None, out_fn=None): #, openai_model="gpt-3.5-turbo", openai_temp=0.8, openai_max_tokens=150, out_fn=None):
         """Extracts information for multiple events using OpenAI API.
 
         Args:
@@ -395,9 +394,9 @@ class ContentExtractor:
                 num_processes = multiprocessing.cpu_count() - 1
 
             # Prepare arguments for parallel processing
-            model_args = [openai_model] * df.shape[0]
-            temp_args = [openai_temp] * df.shape[0]
-            tokens_args = [openai_max_tokens] * df.shape[0]
+            model_args = [self.openai_model] * df.shape[0]
+            temp_args = [self.openai_temp] * df.shape[0]
+            tokens_args = [self.openai_max_tokens] * df.shape[0]
 
             # Use multiprocessing for parallel extraction
             with multiprocessing.Pool(processes=num_processes) as pool:
