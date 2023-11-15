@@ -31,9 +31,12 @@ def nlp_flex(config_file_path):
     mode = config.get('General', 'mode')
     num_processes = config.getint('General', 'num_processes')
     url_col_name = config.get('General', 'url_col_name')
+    openai_model = config.get('General', 'openai_model')
+    openai_temp = config.getfloat('General', 'openai_temp')
+    openai_max_tokens = config.getint('General', 'openai_max_tokens')
 
     # Initialize ContentExtractor
-    extractor = ContentExtractor()
+    extractor = ContentExtractor(openai_model, openai_temp, openai_max_tokens)
     
     # Read data
     data_df = extractor.read_data(input_filename, url_col_name=url_col_name)
