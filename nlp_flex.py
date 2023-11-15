@@ -41,7 +41,7 @@ def nlp_flex(config_file_path):
     if mode == 'extractor':
         # Mode: Extractor
         # Extract content using ContentExtractor
-        extractor.extract_content(data_df[:2], num_processes=num_processes, out_fn=output_filename)
+        extractor.extract_content(data_df, num_processes=num_processes, out_fn=output_filename)
 
     elif mode == 'openai':
         # Mode: OpenAI
@@ -54,7 +54,7 @@ def nlp_flex(config_file_path):
     elif mode == 'all':
         # Mode: All
         # Extract content, filter valid articles, and extract events
-        extracted_df = extractor.extract_content(data_df[:5], num_processes=num_processes)
+        extracted_df = extractor.extract_content(data_df, num_processes=num_processes)
         filtered_df = extractor.filter_scraped_data(extracted_df)
 
         # Extract flood events using OpenAI
