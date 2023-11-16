@@ -3,6 +3,12 @@
 import logging
 import sys
 from datetime import datetime
+from signal import signal, SIGINT
+
+def handler(signalnum, frame):
+    signame = SIGINT.name
+    print(f'Signal handler called with signal {signame} ({signalnum})')
+    raise TypeError
 
 def configure_logging():
     """
