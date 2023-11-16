@@ -30,7 +30,8 @@ USER_AGENT = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) App
 OUTPUT_FOLDER_PATH = "output"
 
 # Set OpenAI API key
-openai.api_key = "sk-..."
+# openai.api_key = "sk-..."
+openai.api_key = "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"
 
 # Override SSL verification settings
 old_merge_environment_settings = requests.Session.merge_environment_settings
@@ -171,9 +172,9 @@ class ContentExtractor:
             requests.Response: Response object.
         """
         try:
-            response = requests.post(url, verify=True, headers=USER_AGENT, timeout=(CONNECT_TIMEOUT, READ_TIMEOUT))
+            response = requests.get(url, verify=True, headers=USER_AGENT, timeout=(CONNECT_TIMEOUT, READ_TIMEOUT))
         except requests.exceptions.SSLError:
-            response = requests.post(url, verify=False, headers=USER_AGENT, timeout=(CONNECT_TIMEOUT, READ_TIMEOUT))
+            response = requests.get(url, verify=False, headers=USER_AGENT, timeout=(CONNECT_TIMEOUT, READ_TIMEOUT))
         except requests.exceptions.ReadTimeout:
             logging.error(f"Access to {url} timed out")
             raise  # Re-raise the exception to be caught in the higher level
