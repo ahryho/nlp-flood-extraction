@@ -14,6 +14,9 @@ import multiprocessing
 import openai
 import logging
 from datetime import datetime
+from signal import signal, SIGINT
+
+from utils import handler
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -140,6 +143,8 @@ class ContentExtractor:
         Returns:
             tuple: Summary, content, and validity flag (1 if valid body, 0 otherwise).
         """
+        signal(SIGINT, handler)
+        
         summary, content, is_valid = '', '', 0
 
         try:
