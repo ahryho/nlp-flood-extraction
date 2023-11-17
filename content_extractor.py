@@ -280,6 +280,30 @@ class ContentExtractor:
             print(f"An error occurred during data filtering: {str(e)}")
             return pd.DataFrame()  # Return an empty DataFrame in case of an error
 
+    def check_and_append_columns(self, df, ncol = 6):
+        """
+        Check the number of columns in a pandas DataFrame and append new columns if necessary.
+
+        Parameters:
+            df (pd.DataFrame): The input DataFrame.
+            ncol (int): The minimum number of columns desired in the DataFrame.
+
+        Returns:
+            pd.DataFrame: The modified DataFrame with ncol columns.
+        """
+        current_columns = len(df.columns)
+
+        if current_columns < ncol:
+            # Determine the number of new columns needed
+            num_new_columns = ncol - current_columns
+
+            # Append new columns with default values
+            for i in range(num_new_columns):
+                new_column_name = f'NewColumn_{i + 1}'
+                df[new_column_name] = '' 
+
+        return df
+
     def transform_openai_response_to_df(self, openai_content):
         """Transforms OpenAI response into a dataframe.
 
@@ -312,7 +336,11 @@ class ContentExtractor:
             # }
             
             # openai_content_df.rename(columns=column_mapping, inplace=True)
-            openai_content_df.columns = ["is_happened", "event_name_en", "date", "location", "death", "evacuation"]
+            
+            column_names = ["is_happened", "event_name_en", "date", "location", "death", "evacuation"]
+            openai_content_df = self.check_and_append_columns(openai_content_df, ncol = len(column_names))
+            openai_content_df.columns = column_names
+            
             return openai_content_df
 
         except Exception as e:
