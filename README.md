@@ -83,4 +83,15 @@ The tool generates output files based on the specified mode:
 * In **All** mode, it combines the features of both modes, saving the final results to the specified output file. If no output file was specified, it creates a csv file with a timestamp in the `output` folder: `output/openai_results_YYYY-MM-DD_HHMMSS.csv`. The extracted URL content is saved to a csv file with a timestamp in the `output` folder: `output/extracted_url_content_YYYY-MM-DD_HHMMSS.csv`.
 
 ## Logging
-The tool logs information, warnings, and errors to the console and a log file with a timestamp in the `logs` folder. The log file contains details about the execution, including the timestamp and any encountered errors. (*Not working properly -> logs from multiprocessing are not saved to the file*)
+The tool logs information, warnings, and errors to the console and a log file with a timestamp in the `logs` folder. The log file contains details about the execution, including the timestamp and any encountered errors (*Not working properly -> logs from multiprocessing are not saved to the file*).
+
+## Limitations
+
+1. Rate limit of OpenAI: 3 RPM and 200 RPD (free version).
+2. SSL verification: 
+   - NRCan certificate added to the default certificates, `cacert.pem`,
+   - OpenAI requests verification, explcite assignment `verify` to `False` doesn’t work => might be the problem in the future.
+
+3. KeyboardInterrupt termination. Issue with the temination of the child processes.
+
+4. Redirecting of warnings and errors of child processes to a log file.
