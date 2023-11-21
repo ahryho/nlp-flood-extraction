@@ -36,7 +36,6 @@ OUTPUT_FOLDER_PATH = "output"
 
 # Set OpenAI API key
 # openai.api_key = "sk-..."
-openai.api_key = "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"
 
 # Override SSL verification settings
 old_merge_environment_settings = requests.Session.merge_environment_settings
