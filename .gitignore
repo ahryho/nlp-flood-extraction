@@ -185,3 +185,6 @@ pyrightconfig.json
 # Output folder
 output/
 logs/
+
+# Sensitive files
+cacert.pem
