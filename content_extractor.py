@@ -35,7 +35,7 @@ USER_AGENT = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) App
 OUTPUT_FOLDER_PATH = "output"
 
 # Set OpenAI API key
-# openai.api_key = "sk-..."
+openai.api_key = "sk-..."
 
 # Override SSL verification settings
 old_merge_environment_settings = requests.Session.merge_environment_settings
@@ -97,8 +97,8 @@ class ContentExtractor:
             # Remove HTML tags from the text using regular expressions
             cleaned_text = re.sub(r'<[^>]+>', '', text)
             
-            # Remove special characters, leaving only alphanumeric characters, commas, periods, and spaces
-            cleaned_text = re.sub(r'[^a-zA-Z0-9.,\s]', '', cleaned_text)
+            # Remove special characters, leaving only alphanumeric characters, commas, periods, and spaces,and French letters with accents
+            cleaned_text = re.sub(r'[^a-zA-Z0-9éàèùçâêîôûëïü.,!\s]', '', cleaned_text)
             
             # Remove extra whitespaces by splitting and rejoining the text
             cleaned_text = ' '.join(cleaned_text.split())
