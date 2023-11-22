@@ -339,7 +339,7 @@ class ContentExtractor:
             
             # openai_content_df.rename(columns=column_mapping, inplace=True)
             
-            column_names = ["is_happened", "event_name_en", "date", "location", "death", "evacuation"]
+            column_names = ["is_happened", "event_name_en", "date", "location", "death", "evacuation", "country"]
             openai_content_df = self.check_and_append_columns(openai_content_df, ncol = len(column_names))
             openai_content_df.columns = column_names
             
@@ -373,9 +373,10 @@ class ContentExtractor:
             quest4 = "4. If a flood event happened, where did it happen? (Name of the place, city, state, country, or Uknown)"
             quest5 = "5. If a flood event happened, how many people died? (Number only or Unknown)"
             quest6 = "6. If a flood event happened, how many people were evacuated? (Number only or Unknown)"
+            quest7 = "7. If the place where flood event happened is known, what is the country? (Country or Unknown)"
             
             user_msg = f"Questions answering: \nContext: {url_content}\n" \
-                    f"{quest1}\n {quest2}\n {quest3}\n {quest4}\n {quest5}\n {quest6}"
+                    f"{quest1}\n {quest2}\n {quest3}\n {quest4}\n {quest5}\n {quest6}\n {quest7}"
 
             if openai_model == "gpt-3.5-turbo":
                 response = openai.ChatCompletion.create(
