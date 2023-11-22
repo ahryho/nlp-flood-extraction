@@ -18,7 +18,7 @@ import logging.handlers
 from datetime import datetime
 from signal import signal, SIGINT
 
-from utils import handler, listener_configurer, listener_process, LOG_FILE_PATH, LOG_NAME
+from utils import handler #, listener_configurer, listener_process, LOG_FILE_PATH, LOG_NAME
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -134,7 +134,7 @@ class ContentExtractor:
             print(f"An error occurred while removing stopwords: {e}")
             return text  # Return the original text in case of an error
 
-    def extract_url_content(self, url, log_queue, i, language='en'):
+    def extract_url_content(self, url, language='en'):
         """Extracts content from a given URL.
 
         Args:
@@ -147,22 +147,6 @@ class ContentExtractor:
             tuple: Summary, content, and validity flag (1 if valid body, 0 otherwise).
         """
         signal(SIGINT, handler)
-        
-        # Create a QueueHandler to enable logging to the shared log_queue
-        qh = logging.handlers.QueueHandler(log_queue)
-        
-        # Get or create the root logger, and add the QueueHandler to it
-        root_logger = logging.getLogger(path.join(LOG_FILE_PATH, LOG_NAME))
-        root_logger.addHandler(qh)
-        
-        # Set the root logger to log info including warnings and errors
-        root_logger.setLevel(logging.INFO)
-
-        # Create a child logger for this specific process
-        logger = logging.getLogger(LOG_NAME).getChild(f'child_{i}') # This allows you to know what process you're in
-        
-        # Set the child logger to log info including warnings and errors
-        logger.setLevel(logging.INFO)
         
         summary, content, is_valid = '', '', 0
 
@@ -239,31 +223,11 @@ class ContentExtractor:
             pd.DataFrame: Dataframe with extracted content.
         """
         try:
-            # Configure the logger for the main process
-            logger = listener_configurer(LOG_NAME, LOG_FILE_PATH)
-
-            # Create a multiprocessing Manager and a Queue for log communication
-            manager = multiprocessing.Manager()
-            log_queue = manager.Queue()
-            # Start the logging listener process in the background
-            listener = multiprocessing.Process(target=listener_process,
-                                               args=(log_queue, listener_configurer, LOG_NAME))
-            listener.start()
-
             if num_processes is None:
                 num_processes = multiprocessing.cpu_count() - 1
                 
             with multiprocessing.Pool(processes=num_processes) as pool:
-                logger.info('hello from before process')
-                # Create a list of parameters to process
-                params = []
-                for i, data in enumerate(df['URL']):
-                    params.append((data, log_queue, i))
-            
-                # params = [(df['URL'], df['Language'], log_queue, i) for i in enumerate(df['URL'])]
-                results = pool.starmap(self.extract_url_content, params)
-
-                # results = pool.starmap(self.extract_url_content, zip(df['URL'], df['Language']))  
+                results = pool.starmap(self.extract_url_content, zip(df['URL'], df['Language']))  
 
         except KeyboardInterrupt:
             logging.error('Got ^C while pool mapping, terminating the pool')
@@ -293,12 +257,6 @@ class ContentExtractor:
             logging.error(f"An error occurred: {str(e)}")
             logging.error("Data aren't saved but returned")
             pass
-
-        # Signal the end of the queue to stop the logging listener
-        log_queue.put_nowait(None)
-
-        # Wait for the logging listener process to complete
-        listener.join()
 
         return df
 

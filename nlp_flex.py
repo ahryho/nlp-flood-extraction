@@ -5,7 +5,7 @@ import argparse
 import logging
 
 from content_extractor import ContentExtractor
-# from utils import configure_logging
+from utils import configure_logging
 
 def nlp_flex(config_file_path):
     """
@@ -18,7 +18,7 @@ def nlp_flex(config_file_path):
         None
     """
     # Configure logging and get the log file path
-    # log_file = configure_logging()
+    log_file = configure_logging()
     
     # Read configuration from the file
     config = configparser.ConfigParser()
@@ -72,7 +72,7 @@ def nlp_flex(config_file_path):
         extractor.extract_events_chatopenai(filtered_df, out_fn=output_filename)
     
     # Log the location of the log file
-    # logging.info(f"Log file created at: {log_file}")
+    logging.info(f"Log file created at: {log_file}")
          
 if __name__ == "__main__":
     # Define command-line arguments
