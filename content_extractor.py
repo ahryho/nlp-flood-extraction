@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 # Timeout in seconds
 CONNECT_TIMEOUT = 5
-READ_TIMEOUT = 120
+READ_TIMEOUT = 60 # 120
 
 # User agent for HTTP requests
 USER_AGENT = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
@@ -140,15 +140,13 @@ class ContentExtractor:
         Args:
             url (str): URL to extract content from.
             language (str, optional): Language of the content. Defaults to 'en'.
-            log_queue (multiprocessing.Queue): A queue used for communication between the main process and the logging listener process.
-            i (int): An integer representing the index or identifier of the current process.
 
         Returns:
             tuple: Summary, content, and validity flag (1 if valid body, 0 otherwise).
         """
         signal(SIGINT, handler)
         
-        summary, content, is_valid = '', '', 0
+        summary, content, is_valid = '', '', -1
 
         try:
             # Make a request to the URL with error handling for SSL, timeout, and connection errors
