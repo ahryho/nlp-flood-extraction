@@ -31,6 +31,7 @@ def nlp_flex(config_file_path):
     mode = config.get('General', 'mode')
     num_processes = config.getint('General', 'num_processes')
     url_col_name = config.get('General', 'url_col_name')
+    pub_date_col_name = config.get('General', 'pub_date_col_name')
     
     if mode in {'openai', 'all'}:
         openai_model = config.get('General', 'openai_model')
@@ -47,7 +48,7 @@ def nlp_flex(config_file_path):
         exit(0)
     
     # Read data
-    data_df = extractor.read_data(input_filename, url_col_name=url_col_name)
+    data_df = extractor.read_data(input_filename, url_col_name=url_col_name, pub_date_col_name=pub_date_col_name)
     
     if mode == 'extractor':
         # Mode: Extractor
@@ -60,7 +61,7 @@ def nlp_flex(config_file_path):
         filtered_df = extractor.filter_scraped_data(data_df)
 
         # Extract flood events using OpenAI
-        extractor.extract_events_chatopenai(filtered_df, out_fn=output_filename)
+        extractor.extract_events_chatopenai(filtered_df,  num_processes=num_processes, out_fn=output_filename)
 
     elif mode == 'all':
         # Mode: All
@@ -69,7 +70,7 @@ def nlp_flex(config_file_path):
         filtered_df = extractor.filter_scraped_data(extracted_df)
 
         # Extract flood events using OpenAI
-        extractor.extract_events_chatopenai(filtered_df, out_fn=output_filename)
+        extractor.extract_events_chatopenai(filtered_df,  num_processes=num_processes, out_fn=output_filename)
     
     # Log the location of the log file
     logging.info(f"Log file created at: {log_file}")

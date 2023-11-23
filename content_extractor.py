@@ -17,6 +17,7 @@ import logging
 import logging.handlers
 from datetime import datetime
 from signal import signal, SIGINT
+import time
 
 from utils import handler #, listener_configurer, listener_process, LOG_FILE_PATH, LOG_NAME
 
@@ -35,7 +36,7 @@ USER_AGENT = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) App
 OUTPUT_FOLDER_PATH = "output"
 
 # Set OpenAI API key
-openai.api_key = "sk-..."
+openai.api_key = "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"
 
 # Override SSL verification settings
 old_merge_environment_settings = requests.Session.merge_environment_settings
@@ -54,7 +55,7 @@ class ContentExtractor:
         # Get the set of English stopwords
         self.stop_words = set(stopwords.words('english'))
         
-    def read_data(self, fn, url_col_name="LinkURI"):
+    def read_data(self, fn, url_col_name="LinkURI", pub_date_col_name="PublishedDate"):
         """Reads data from a CSV file.
 
         Args:
@@ -74,9 +75,13 @@ class ContentExtractor:
         # Additional error handling for missing URL column
         if url_col_name not in df.columns:
             raise ValueError(f"Column '{url_col_name}' not found in the CSV file. Please check the column name or provide a valid column name.")
+        
+        if pub_date_col_name not in df.columns:
+            raise ValueError(f"Column '{pub_date_col_name}' not found in the CSV file. Please check the column name or provide a valid column name.")
 
-        # Rename the specified URL column to "URL"
+        # Rename the specified URL column to "URL", and article published date column to "PublishedDate"
         df.rename(columns={url_col_name: "URL"}, inplace=True)
+        df.rename(columns={pub_date_col_name: "PublishedDate"}, inplace=True)
         
         # Additional error handling for an empty dataframe
         if df.empty:
@@ -98,7 +103,7 @@ class ContentExtractor:
             cleaned_text = re.sub(r'<[^>]+>', '', text)
             
             # Remove special characters, leaving only alphanumeric characters, commas, periods, and spaces,and French letters with accents
-            cleaned_text = re.sub(r'[^a-zA-Z0-9éàèùçâêîôûëïü.,!\s]', '', cleaned_text)
+            cleaned_text = re.sub(r"""[^a-zA-Z0-9éàèùçâêîôûëïü.,!-:;()"'\s]""", '', cleaned_text)
             
             # Remove extra whitespaces by splitting and rejoining the text
             cleaned_text = ' '.join(cleaned_text.split())
@@ -339,7 +344,7 @@ class ContentExtractor:
             
             # openai_content_df.rename(columns=column_mapping, inplace=True)
             
-            column_names = ["is_happened", "event_name_en", "date", "location", "death", "evacuation", "country"]
+            column_names = ["is_happened", "flood_cause_en", "date", "location", "death", "evacuation", "country"]
             openai_content_df = self.check_and_append_columns(openai_content_df, ncol = len(column_names))
             openai_content_df.columns = column_names
             
@@ -350,7 +355,7 @@ class ContentExtractor:
             logger.error(f"An error occurred during transformation: {str(e)}")
             return pd.DataFrame()  # Return an empty DataFrame in case of an error
 
-    def extract_single_event_chatopenai(self, url_content, url, openai_model, openai_temp, openai_max_tokens):
+    def extract_single_event_chatopenai(self, url_content, url, publish_date, openai_model, openai_temp, openai_max_tokens):
         """Extracts information for a single event using OpenAI API.
 
         Args:
@@ -364,16 +369,17 @@ class ContentExtractor:
             pd.DataFrame: Dataframe with extracted information.
         """
         try:
-            logger.info(f"Extracting information from {url}")
+            logger.info(f"OpenAI is extracting information from {url}")
 
-            system_msg = 'You are a helpful assistant. Your responses consist of valid JSON syntax, with no other comments, explanations, reasoning, or dialogue not consisting of valid JSON.'
-            quest1 = "1. Did a flood event happen? (Yes or No only)"
-            quest2 = "2. If a flood event happened, what is its name? (Name only or Unknown)"
-            quest3 = "3. If a flood event happened, when did it happen? (YYYY-MM only or Unknown)"
-            quest4 = "4. If a flood event happened, where did it happen? (Name of the place, city, state, country, or Uknown)"
-            quest5 = "5. If a flood event happened, how many people died? (Number only or Unknown)"
-            quest6 = "6. If a flood event happened, how many people were evacuated? (Number only or Unknown)"
-            quest7 = "7. If the place where flood event happened is known, what is the country? (Country or Unknown)"
+            system_msg = 'You are a helpful assistant. You answer all questions. Your responses consist of valid JSON syntax, with no other comments, explanations, reasoning, or dialogue not consisting of valid JSON.'
+            quest1 = "1. Did a flood event occur? (Yes or No only)"
+            quest2 = "2. If a flood event occured, what caused the flood event? (Specify the cause or mark as Unknown)"
+            # quest3 = "3. If a flood event happened and its cause is known, what is the name of this cause? (Name of the cause only or Unknown)"
+            quest3 = "3. If a flood event occurred, when did it happen? (Specify in YYYY-MM format or mark as Unknown)"
+            quest4 = "4. If a flood event occurred, where did it happen? (Specify all affected places)"
+            quest5 = "5. If a flood event occurred, how many casualties were there? (Specify the number or mark as Unknown)"
+            quest6 = "6. If a flood event occurred, how many people were evacuated? (Specify the number or mark as Unknown)"
+            quest7 = "7. If the location of the flood event is known, in which country did it occur? (Specify the country or mark as Unknown)"
             
             user_msg = f"Questions answering: \nContext: {url_content}\n" \
                     f"{quest1}\n {quest2}\n {quest3}\n {quest4}\n {quest5}\n {quest6}\n {quest7}"
@@ -402,6 +408,9 @@ class ContentExtractor:
             logger.info(f"Transforming information from {url}")
             content_df = self.transform_openai_response_to_df(openai_content)
             content_df["link"] = url
+            content_df["published_date"] = publish_date
+            
+            time.sleep(60)
 
             return content_df
 
@@ -438,7 +447,7 @@ class ContentExtractor:
             with multiprocessing.Pool(processes=num_processes) as pool:
                 results = pool.starmap(
                     self.extract_single_event_chatopenai,
-                    zip(df['New_Content'], df['URL'], model_args, temp_args, tokens_args)
+                    zip(df['New_Content'], df['URL'], df['PublishedDate'], model_args, temp_args, tokens_args)
                 )
 
             # Combine results into a single DataFrame
