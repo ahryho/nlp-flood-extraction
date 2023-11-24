@@ -36,7 +36,7 @@ USER_AGENT = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) App
 OUTPUT_FOLDER_PATH = "output"
 
 # Set OpenAI API key
-openai.api_key = "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"
+openai.api_key = "sk-"
 
 # Override SSL verification settings
 old_merge_environment_settings = requests.Session.merge_environment_settings
