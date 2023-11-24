@@ -36,7 +36,7 @@ USER_AGENT = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) App
 OUTPUT_FOLDER_PATH = "output"
 
 # Set OpenAI API key
-openai.api_key = "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"
+openai.api_key = "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"
 
 # Override SSL verification settings
 old_merge_environment_settings = requests.Session.merge_environment_settings
@@ -311,56 +311,14 @@ class ContentExtractor:
 
         return df
 
-    def transform_openai_response_to_df(self, openai_content):
-        """Transforms OpenAI response into a dataframe.
-
-        Args:
-            openai_content (str): OpenAI response content.
-
-        Returns:
-            pd.DataFrame: Dataframe with transformed OpenAI content.
-        """
-        try:
-            if self.openai_model == "gpt-3.5-turbo":
-                openai_content = re.sub(r'\n  ', '', openai_content)
-            else:
-                pattern = re.compile(r'Answers(\d+): (.+)')
-                matches = pattern.findall(openai_content)
-                data_dict = {f'Answers{index}': value for index, value in matches}
-                openai_content = json.dumps(data_dict, indent=4)
-                openai_content = re.sub("Answers", "Question", openai_content)
-            
-            openai_content_dict = json.loads(openai_content)
-            openai_content_df = pd.DataFrame([openai_content_dict])
-            
-            # column_mapping = {
-            #     "Question1": "is_happened",
-            #     "Question2": "event_name_en",
-            #     "Question3": "date",
-            #     "Question4": "location",
-            #     "Question5": "death",
-            #     "Question6": "evacuation"
-            # }
-            
-            # openai_content_df.rename(columns=column_mapping, inplace=True)
-            
-            column_names = ["is_happened", "flood_cause_en", "date", "location", "death", "evacuation", "country"]
-            openai_content_df = self.check_and_append_columns(openai_content_df, ncol = len(column_names))
-            openai_content_df.columns = column_names
-            
-            return openai_content_df
-
-        except Exception as e:
-            # Handle any unexpected errors and print a helpful message
-            logger.error(f"An error occurred during transformation: {str(e)}")
-            return pd.DataFrame()  # Return an empty DataFrame in case of an error
-
-    def extract_single_event_chatopenai(self, url_content, url, publish_date, openai_model, openai_temp, openai_max_tokens):
+    def extract_single_event_chatopenai(self, url_content, url, language, publish_date, openai_model="gpt-3.5-turbo", openai_temp=0.8, openai_max_tokens=100):
         """Extracts information for a single event using OpenAI API.
 
         Args:
             url_content (str): Content of the URL.
             url (str): URL of the event.
+            language (str): Language of the content ('en' for English, 'fr' for French).
+            publish_date (str): Date of the event publication.
             openai_model (str, optional): OpenAI model name. Defaults to "gpt-3.5-turbo".
             openai_temp (float, optional): Temperature for OpenAI response. Defaults to 0.8.
             openai_max_tokens (int, optional): Maximum tokens for OpenAI response. Defaults to 100.
@@ -371,19 +329,64 @@ class ContentExtractor:
         try:
             logger.info(f"OpenAI is extracting information from {url}")
 
-            system_msg = 'You are a helpful assistant. You answer all questions. Your responses consist of valid JSON syntax, with no other comments, explanations, reasoning, or dialogue not consisting of valid JSON.'
+            # Define system and user messages based on the language
+            system_msg, user_msg = self.prepare_messages(language, url_content)
+
+            # Make an OpenAI API call
+            openai_content = self.make_openai_call(openai_model, openai_temp, openai_max_tokens, system_msg, user_msg)
+
+            # Transform OpenAI response to DataFrame
+            content_df = self.transform_openai_response_to_df(openai_content)
+
+            # Add metadata to the DataFrame
+            content_df["link"] = url
+            content_df["published_date"] = publish_date
+
+            # Pause for 60 seconds to avoid API rate limits
+            time.sleep(60)
+
+            return content_df
+
+        except Exception as e:
+            # Handle any unexpected errors
+            logger.error(f"An error occurred during extraction: {str(e)}")
+            return pd.DataFrame()  # Return an empty DataFrame in case of an error
+
+
+    def prepare_messages(self, language, url_content):
+        # Prepare system and user messages based on the language
+        if language == 'en':
+            system_msg = 'You are a helpful assistant. You answer all the questions. Your responses consist of valid JSON syntax, with no other comments, explanations, reasoning, or dialogue not consisting of valid JSON.'
             quest1 = "1. Did a flood event occur? (Yes or No only)"
-            quest2 = "2. If a flood event occured, what caused the flood event? (Specify the cause or mark as Unknown)"
+            quest2 = "2. If a flood event occurred, what caused the flood event? (Specify the cause or mark as Unknown)"
             # quest3 = "3. If a flood event happened and its cause is known, what is the name of this cause? (Name of the cause only or Unknown)"
             quest3 = "3. If a flood event occurred, when did it happen? (Specify in YYYY-MM format or mark as Unknown)"
             quest4 = "4. If a flood event occurred, where did it happen? (Specify all affected places)"
-            quest5 = "5. If a flood event occurred, how many casualties were there? (Specify the number or mark as Unknown)"
-            quest6 = "6. If a flood event occurred, how many people were evacuated? (Specify the number or mark as Unknown)"
-            quest7 = "7. If the location of the flood event is known, in which country did it occur? (Specify the country or mark as Unknown)"
+            quest5 = "5. Did any casualties occur if a flood event took place? (Yes or No or mark as Unknown)"
+            quest6 = "6. Did evacuation take place if a flood event occurred? (Yes or No or mark as Unknown)"
+            quest7 = "7. If the locations of the flood-affected areas are known, which country are they in? (Specify the country or mark as Unknown)"
             
-            user_msg = f"Questions answering: \nContext: {url_content}\n" \
-                    f"{quest1}\n {quest2}\n {quest3}\n {quest4}\n {quest5}\n {quest6}\n {quest7}"
+            user_msg = f"Questions answering: \nContext: {url_content}\n {quest1}\n {quest2}\n {quest3}\n {quest4}\n {quest5}\n {quest6}\n {quest7}"            
+        elif language == 'fr':
+            system_msg = "Vous êtes un assistant utile. Vous répondez à toutes les questions. Vos réponses consistent en une syntaxe JSON valide, sans autres commentaires, explications, raisonnements ou dialogues qui ne sont pas constitués de syntaxe JSON valide."
+            quest1 = "1. Est-ce qu'un événement d'inondation s'est produit ? (Oui ou Non seulement)"
+            quest2 = "2. Si un événement d'inondation s'est produit, quelle en était la cause ? (Spécifiez la cause ou marquez comme Inconnu)"
+            quest3 = "3. Si un événement d'inondation s'est produit, quand s'est-il produit ? (Spécifiez au format AAAA-MM ou marquez comme Inconnu)"
+            quest4 = "4. Si un événement d'inondation s'est produit, où s'est-il produit ? (Spécifiez tous les endroits affectés)"
+            quest5 = "5. Y a-t-il eu des victimes en cas d'inondation? (Oui ou Non ou marquer comme Inconnu)"
+            quest6 = "6. Est-ce qu'une évacuation a eu lieu en cas d'inondation ? (Oui, Non ou marquer comme Inconnu)"
+            quest7 = "7. Si les emplacements des zones touchées par l'inondation sont connus, dans quel pays se trouvent-elles ? (Spécifiez le pays ou marquez comme Inconnu)"
+            
+            user_msg = f"Réponses aux questions : \nContexte: {url_content}\n {quest1}\n {quest2}\n {quest3}\n {quest4}\n {quest5}\n {quest6}\n {quest7}"          
+        else:
+            logging.error("The provided mode is not recognized.")
+            raise
 
+        return system_msg, user_msg
+
+    def make_openai_call(self, openai_model, openai_temp, openai_max_tokens, system_msg, user_msg):
+        # Make an OpenAI API call based on the chosen model
+        try:
             if openai_model == "gpt-3.5-turbo":
                 response = openai.ChatCompletion.create(
                     model=openai_model,
@@ -405,18 +408,48 @@ class ContentExtractor:
                 )
                 openai_content = response['choices'][0]['text']
 
-            logger.info(f"Transforming information from {url}")
-            content_df = self.transform_openai_response_to_df(openai_content)
-            content_df["link"] = url
-            content_df["published_date"] = publish_date
-            
-            time.sleep(60)
-
-            return content_df
+            return openai_content
 
         except Exception as e:
-            # Handle any unexpected errors
-            logger.error(f"An error occurred during extraction: {str(e)}")
+            # Handle any unexpected errors during the OpenAI API call
+            logger.error(f"An error occurred during the OpenAI API call: {str(e)}")
+            raise
+    
+    def transform_openai_response_to_df(self, openai_content):
+        """Transforms OpenAI response into a dataframe.
+
+        Args:
+            openai_content (str): OpenAI response content.
+
+        Returns:
+            pd.DataFrame: Dataframe with transformed OpenAI content.
+        """
+        try:
+            if self.openai_model == "gpt-3.5-turbo":
+                # Replace newline characters and leading/trailing spaces
+                openai_content = openai_content.replace('[', '').replace(']', '').replace('\n ', '')
+                # openai_content = re.sub(r'\n ', '', openai_content)
+                # Remove any non-printable characters
+                openai_content = ''.join(char for char in openai_content if char.isprintable())
+            else:
+                pattern = re.compile(r'Answers(\d+): (.+)')
+                matches = pattern.findall(openai_content)
+                data_dict = {f'Answers{index}': value for index, value in matches}
+                openai_content = json.dumps(data_dict, indent=4)
+                openai_content = re.sub("Answers", "Question", openai_content)
+            
+            openai_content_dict = json.loads(openai_content)
+            openai_content_df = pd.DataFrame([openai_content_dict])
+            
+            column_names = ["is_happened", "flood_cause_en", "date", "location", "death", "evacuation", "country"]
+            openai_content_df = self.check_and_append_columns(openai_content_df, ncol = len(column_names))
+            openai_content_df.columns = column_names
+            
+            return openai_content_df
+
+        except Exception as e:
+            # Handle any unexpected errors and print a helpful message
+            logger.error(f"An error occurred during transformation: {str(e)}")
             return pd.DataFrame()  # Return an empty DataFrame in case of an error
 
     def extract_events_chatopenai(self, df, num_processes=None, out_fn=None): #, openai_model="gpt-3.5-turbo", openai_temp=0.8, openai_max_tokens=150, out_fn=None):
@@ -447,7 +480,8 @@ class ContentExtractor:
             with multiprocessing.Pool(processes=num_processes) as pool:
                 results = pool.starmap(
                     self.extract_single_event_chatopenai,
-                    zip(df['New_Content'], df['URL'], df['PublishedDate'], model_args, temp_args, tokens_args)
+                    zip(df['New_Content'], df['URL'], df['Language'], df['PublishedDate'], 
+                        model_args, temp_args, tokens_args)
                 )
 
             # Combine results into a single DataFrame
