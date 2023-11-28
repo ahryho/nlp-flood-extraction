@@ -345,7 +345,7 @@ class ContentExtractor:
             # Pause for 60 seconds to avoid API rate limits
             time.sleep(60)
 
-            return content_df
+            return  content_df # openai_content #
 
         except Exception as e:
             # Handle any unexpected errors
@@ -356,23 +356,24 @@ class ContentExtractor:
     def prepare_messages(self, language, url_content):
         # Prepare system and user messages based on the language
         if language == 'en':
-            system_msg = 'You are a helpful assistant. You answer all the questions. Your responses consist of valid JSON syntax, with no other comments, explanations, reasoning, or dialogue not consisting of valid JSON.'
-            quest1 = "1. Did a flood event occur? (Yes or No only)"
+            system_msg = "You are a helpful assistant. You answer all the questions. Your responses consist of valid JSON syntax, with no other comments, explanations, reasoning, or dialogue that do not consist of valid JSON. Each key is the question number. You do not include the questions themselves. Each value is the corresponding answer. Each key-value pair should be enclosed in curly braces, and each key and value should be enclosed in double-quotes."            # system_msg = "You are a helpful assistant. You answer all the questions. Your responses consist of valid JSON syntax. Do not include any additional comments, explanations, reasoning, or dialogue not consisting of valid JSON. Include the number of question only. Do not include any questions. Each question number and answer should be enclosed in double-quotes. "
+            # system_msg = 'You are a helpful assistant. You answer all the questions. Your responses consist of valid JSON syntax, with no other comments, explanations, reasoning, or dialogue not consisting of valid JSON. You put each answer '
+            quest1 = "1. Did a flood event occur? (Respond with 'Yes' or No' only. If the answer is 'No', mark the following questions as 'NA'.)"
             quest2 = "2. If a flood event occurred, what caused the flood event? (Specify the cause or mark as Unknown)"
             # quest3 = "3. If a flood event happened and its cause is known, what is the name of this cause? (Name of the cause only or Unknown)"
             quest3 = "3. If a flood event occurred, when did it happen? (Specify in YYYY-MM format or mark as Unknown)"
-            quest4 = "4. If a flood event occurred, where did it happen? (Specify all affected places)"
+            quest4 = "4. If a flood event occurred, where did it happen? (Specify all affected places or mark as Unknown)"
             quest5 = "5. Did any casualties occur if a flood event took place? (Yes or No or mark as Unknown)"
             quest6 = "6. Did evacuation take place if a flood event occurred? (Yes or No or mark as Unknown)"
             quest7 = "7. If the locations of the flood-affected areas are known, which country are they in? (Specify the country or mark as Unknown)"
             
             user_msg = f"Questions answering: \nContext: {url_content}\n {quest1}\n {quest2}\n {quest3}\n {quest4}\n {quest5}\n {quest6}\n {quest7}"            
         elif language == 'fr':
-            system_msg = "Vous êtes un assistant utile. Vous répondez à toutes les questions. Vos réponses consistent en une syntaxe JSON valide, sans autres commentaires, explications, raisonnements ou dialogues qui ne sont pas constitués de syntaxe JSON valide."
-            quest1 = "1. Est-ce qu'un événement d'inondation s'est produit ? (Oui ou Non seulement)"
+            system_msg = "Vous êtes un assistant fournissant des réponses utiles. Vous répondez à toutes les questions. Vos réponses consistent en une syntaxe JSON valide, sans autres commentaires, explications, raisonnements ou dialogues qui ne sont pas constitués de syntaxe JSON valide. Chaque clé est le numéro de la question. N'incluez pas les questions elles-mêmes. Chaque valeur est la réponse correspondante. Chaque paire clé-valeur doit être enfermée dans des accolades, et chaque clé et valeur doivent être enfermées entre guillemets."
+            quest1 = "1. Est-ce qu'un événement d'inondation s'est produit ? (Oui ou Non seulement. Si la réponse est 'Non', marquez les questions suivantes comme 'NA'.)"
             quest2 = "2. Si un événement d'inondation s'est produit, quelle en était la cause ? (Spécifiez la cause ou marquez comme Inconnu)"
             quest3 = "3. Si un événement d'inondation s'est produit, quand s'est-il produit ? (Spécifiez au format AAAA-MM ou marquez comme Inconnu)"
-            quest4 = "4. Si un événement d'inondation s'est produit, où s'est-il produit ? (Spécifiez tous les endroits affectés)"
+            quest4 = "4. Si un événement d'inondation s'est produit, où s'est-il produit ? (Spécifiez tous les endroits affectés ou marquez comme Inconnu))"
             quest5 = "5. Y a-t-il eu des victimes en cas d'inondation? (Oui ou Non ou marquer comme Inconnu)"
             quest6 = "6. Est-ce qu'une évacuation a eu lieu en cas d'inondation ? (Oui, Non ou marquer comme Inconnu)"
             quest7 = "7. Si les emplacements des zones touchées par l'inondation sont connus, dans quel pays se trouvent-elles ? (Spécifiez le pays ou marquez comme Inconnu)"
