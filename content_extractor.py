@@ -61,6 +61,7 @@ class ContentExtractor:
         Args:
             fn (str): File name.
             url_col_name (str, optional): Name of the column with URLs. Defaults to "LinkURI".
+            pub_date_col_name (str, optional): Name of the column with article publication dates. Defaults to "PublishedDate".
 
         Returns:
             pd.DataFrame: Dataframe with read data.
@@ -196,11 +197,10 @@ class ContentExtractor:
 
         return response
 
-    def extract_article(self, url, response, language):
+    def extract_article(self, response, language):
         """Extracts article information using the newspaper library.
 
         Args:
-            url (str): URL of the article.
             response (requests.Response): Response object from the request.
             language (str): Language of the article.
 
@@ -318,10 +318,7 @@ class ContentExtractor:
             url_content (str): Content of the URL.
             url (str): URL of the event.
             language (str): Language of the content ('en' for English, 'fr' for French).
-            publish_date (str): Date of the event publication.
-            openai_model (str, optional): OpenAI model name. Defaults to "gpt-3.5-turbo".
-            openai_temp (float, optional): Temperature for OpenAI response. Defaults to 0.8.
-            openai_max_tokens (int, optional): Maximum tokens for OpenAI response. Defaults to 100.
+            publish_date (str): Date of the URL article publication.
 
         Returns:
             pd.DataFrame: Dataframe with extracted information.
@@ -345,7 +342,7 @@ class ContentExtractor:
             # Pause for 60 seconds to avoid API rate limits
             time.sleep(60)
 
-            return  content_df # openai_content #
+            return  openai_content #content_df # openai_content #
 
         except Exception as e:
             # Handle any unexpected errors
@@ -354,7 +351,15 @@ class ContentExtractor:
 
 
     def prepare_messages(self, language, url_content):
-        # Prepare system and user messages based on the language
+        """Prepare system and user messages based on the language.
+
+        Args:
+            language (str): Language code ('en' or 'fr').
+            url_content (str): Context from the URL.
+
+        Returns:
+            tuple: System message and user message.
+        """
         if language == 'en':
             system_msg = "You are a helpful assistant. You answer all the questions. Your responses consist of valid JSON syntax, with no other comments, explanations, reasoning, or dialogue that do not consist of valid JSON. Each key is the question number. You do not include the questions themselves. Each value is the corresponding answer. Each key-value pair should be enclosed in curly braces, and each key and value should be enclosed in double-quotes."            # system_msg = "You are a helpful assistant. You answer all the questions. Your responses consist of valid JSON syntax. Do not include any additional comments, explanations, reasoning, or dialogue not consisting of valid JSON. Include the number of question only. Do not include any questions. Each question number and answer should be enclosed in double-quotes. "
             # system_msg = 'You are a helpful assistant. You answer all the questions. Your responses consist of valid JSON syntax, with no other comments, explanations, reasoning, or dialogue not consisting of valid JSON. You put each answer '
@@ -381,12 +386,20 @@ class ContentExtractor:
             user_msg = f"Réponses aux questions : \nContexte: {url_content}\n {quest1}\n {quest2}\n {quest3}\n {quest4}\n {quest5}\n {quest6}\n {quest7}"          
         else:
             logging.error("The provided mode is not recognized.")
-            raise
+            raise ValueError("The provided mode is not recognized.")
 
         return system_msg, user_msg
 
     def make_openai_call(self, system_msg, user_msg):
-        # Make an OpenAI API call based on the chosen model
+        """Make an OpenAI API call based on the chosen model.
+
+        Args:
+            system_msg (str): System message for OpenAI.
+            user_msg (str): User message for OpenAI.
+
+        Returns:
+            str: OpenAI response content.
+        """
         try:
             if self.openai_model in ["gpt-3.5-turbo", "gpt-3.5-turbo-1106"]:
                 response = openai.ChatCompletion.create(
@@ -466,7 +479,7 @@ class ContentExtractor:
             openai_content_df = self.check_and_append_columns(openai_content_df, ncol=len(column_names))
             openai_content_df.columns = column_names
 
-            return openai_content_df # pd.DataFrame()  # Return an empty DataFrame in case of an error
+            return openai_content_df
 
     def extract_events_chatopenai(self, df, num_processes=None, out_fn=None): #, openai_model="gpt-3.5-turbo", openai_temp=0.8, openai_max_tokens=150, out_fn=None):
         """Extracts information for multiple events using OpenAI API.
@@ -474,9 +487,6 @@ class ContentExtractor:
         Args:
             df (pd.DataFrame): Dataframe with content and URLs.
             num_processes (int, optional): Number of processes for parallel extraction. Defaults to None.
-            openai_model (str, optional): OpenAI model name. Defaults to "gpt-3.5-turbo".
-            openai_temp (float, optional): Temperature for OpenAI response. Defaults to 0.8.
-            openai_max_tokens (int, optional): Maximum tokens for OpenAI response. Defaults to 100.
             out_fn (str, optional): Output file name to save the results. Defaults to None.
 
         Returns:
@@ -531,7 +541,6 @@ class ContentExtractor:
         except Exception as e:
             # Handle exceptions during the saving process
             logger.error(f"An error occurred while saving results: {str(e)}")
-            logger.info("Data aren't saved but returned.")
 
         # Return the DataFrame with extracted information
         return results_df
