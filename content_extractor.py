@@ -244,7 +244,7 @@ class ContentExtractor:
 
         try:
             logging.info("Saving results ...")
-            if out_fn is not None:
+            if out_fn is not None and out_fn != "":
                 df.to_csv(out_fn, index=False, sep='|')
             else:
                 if not os.path.exists(OUTPUT_FOLDER_PATH): 
@@ -525,7 +525,7 @@ class ContentExtractor:
         try:
             # Save results to a CSV file if an output filename is provided
             logging.info("Saving results ...")
-            if out_fn is not None:
+            if out_fn is not None and out_fn != "":
                 results_df.to_csv(out_fn, index=False, sep='|')
             else:
                 if not os.path.exists(OUTPUT_FOLDER_PATH): 
