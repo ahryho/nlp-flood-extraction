@@ -189,3 +189,4 @@ logs/
 # Sensitive files
 cacert.pem
 config/test.ini
+nlp_flex.ipynb
