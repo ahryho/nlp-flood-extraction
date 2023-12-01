@@ -43,13 +43,6 @@ These instructions will help you set up and run the tool in a Conda environment 
     ```bash
     conda activate nlp_flood_extract_env
     ```
-
-5. Configure your OpenAI API key by setting the openai.api_key variable in `content_extractor.py`.
-
-    ```python
-    # Set OpenAI API key
-    openai.api_key = "sk-..."
-    ```
    
 ## Usage
 
@@ -65,14 +58,18 @@ The tool uses a configuration file to specify various parameters such as input f
 
 ```ini
 [General]
-input_filename = path/to/input.csv
-output_filename = path/to/output.csv  ; Set to "None" for no output file
-mode = all  ; Options: extractor, openai, all
-num_processes = 4  ; Number of processes for parallel extraction
-url_col_name = LinkURI  ; Name of the column with URLs
-openai_model = gpt-3.5-turbo
-openai_temp = 0.8 
-openai_max_tokens = 150
+input_filename = data/collection_articles.csv      ; Path to the file with th elist of URLs
+output_filename = output/openai_results_test.csv   ; Set to "None" or leave it empty for no output file
+mode = all           ; Options: extractor, openai, all
+num_processes = 1    ; Number of processes for parallel extraction
+url_col_name = URL   ; Name of the column with URLs
+pub_date_col_name = PublishedDate  ; Name of the column with date when the article was  published
+
+[OpenAI]
+openai_api_key = sk-                 ; OpenAI API key
+openai_model = gpt-3.5-turbo-1106    ; OpenAI model name
+openai_temp = 0.85                   ; Temperature for OpenAI response
+openai_max_tokens = 200              ; Maximum tokens for OpenAI response
 ```
 
 ## Output
