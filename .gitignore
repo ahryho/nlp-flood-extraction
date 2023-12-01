@@ -188,3 +188,4 @@ logs/
 
 # Sensitive files
 cacert.pem
+config/test.ini
