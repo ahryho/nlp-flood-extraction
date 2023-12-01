@@ -35,15 +35,16 @@ USER_AGENT = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) App
 # Output folder results
 OUTPUT_FOLDER_PATH = "output"
 
-# Set OpenAI API key
-openai.api_key = "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"
-
 # Override SSL verification settings
 old_merge_environment_settings = requests.Session.merge_environment_settings
 os.environ['REQUESTS_CA_BUNDLE'] = 'cacert.pem' #'NRCAN-Root-2019-B64.cer'
 
 class ContentExtractor:
-    def __init__(self, openai_model="gpt-3.5-turbo", openai_temp=0.8, openai_max_tokens=100):
+    def __init__(self, openai_api_key = "", openai_model="gpt-3.5-turbo", openai_temp=0.8, openai_max_tokens=100):
+        # Set OpenAI API key
+        openai.api_key = openai_api_key 
+        
+        # Set OpenAI parameters
         self.openai_model = openai_model
         self.openai_temp = openai_temp
         self.openai_max_tokens = openai_max_tokens
