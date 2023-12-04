@@ -10,6 +10,19 @@ This tool provides functionality for extracting and processing content from URLs
 
 These instructions will help you set up and run the tool in a Conda environment on the local machine.
 
+### Structure
+
+The tool consists of the following files:
+
+* `nlp_flex.py`: Main script for running the tool.
+* `content_extraction.py`: Script for extracting content from URLs using Newspaper3k and processing the extracted content using OpenAI.
+* `utils.py`: Logging configuration for the tool.
+* `environment.yml`: Conda environment file for the tool.
+* `config`: Folder containing configuration files for the tool.
+* `data`: Folder containing input files for the tool.
+* `output`: Folder containing results files for the tool.
+* `logs`: Folder containing log files for the tool.
+
 ### Requirements
 
 - [Python 3.12](https://www.python.org/downloads/) 
