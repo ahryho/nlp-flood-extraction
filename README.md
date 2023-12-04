@@ -21,7 +21,7 @@ The tool consists of the following files:
 * `config`: Folder containing configuration files for the tool.
 * `data`: Folder containing input files for the tool.
 * `output`: Folder containing results files for the tool.
-* `logs`: Folder containing log files for the tool.
+* `logs`: Folder containing log files for the tool. Please, note that the log files are not included in the repository, but they are generated and stored locally on the user's machine.
 
 ### Requirements
 
