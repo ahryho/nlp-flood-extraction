@@ -19,10 +19,11 @@ from datetime import datetime
 from signal import signal, SIGINT
 import time
 
-from utils import handler #, listener_configurer, listener_process, LOG_FILE_PATH, LOG_NAME
+from utils import handler, LOGGING_CONFIG
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+# logging.basicConfig(level=logging.INFO)
+logging.config.dictConfig(LOGGING_CONFIG)
 logger = logging.getLogger(__name__)
 
 # Timeout in seconds
