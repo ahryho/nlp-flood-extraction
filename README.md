@@ -93,9 +93,7 @@ The tool generates output files based on the specified mode:
 * In **All** mode, it combines the features of both modes, saving the final results to the specified output file. If no output file was specified, it creates a csv file with a timestamp in the `output` folder: `output/openai_results_YYYY-MM-DD_HHMMSS.csv`. The extracted URL content is saved to a csv file with a timestamp in the `output` folder: `output/extracted_url_content_YYYY-MM-DD_HHMMSS.csv`.
 
 ## Logging
-The tool logs information, warnings, and errors to the console and a log file with a timestamp in the `logs` folder. The log file is named as follows: `logs/nlp_flex_YYYY-MM-DD_HHMMSS.log`. The log file contains details about the tool's execution, including the start and end time, the number of URLs processed, the number of URLs that failed, and the number of URLs that were skipped. It also contains information about the number of URLs processed by each process in the case of parallel processing. 
-
-__Attention!__ _The log file does not contain warnings and errors of child processes. The warnings and errors are displayed in the console but not saved to the log file. The log file contains only the warnings and errors of the main process._
+The tool logs information, warnings, and errors to the console and a log file with a timestamp in the `logs` folder. The log file is named as follows: `logs/nlp_flex_YYYY-MM-DD_HH-MM.log`. The log file contains details about the tool's execution, including the start and end time, the number of URLs processed, the number of URLs that failed, and the number of URLs that were skipped. It also contains information about the number of URLs processed by each process in the case of parallel processing. The log file also contains warnings and errors of the main process.
 
 ## Limitations
 
@@ -103,6 +101,4 @@ __Attention!__ _The log file does not contain warnings and errors of child proce
 
 2. The tool uses the free plan of the [OpenAI API](https://platform.openai.com/account/limits), which allows 3 requests per minute, RPM. To address this limitation, the tool uses a 'sleep' request of 60 seconds. This is not ideal, but it is the only way to avoid the error message: "Too many requests. Please wait for a minute before making a new request." The tool can be modified to use a different plan to increase the number of requests per minute. While this mitigates RPM constraints, it does not address the daily API call limit. 
 
-3. Redirecting of warnings and errors of child processes to the log file is not working properly. The warnings and errors are displayed in the console but not saved to the log file. The log file contains only the warnings and errors of the main process.
-
-4. KeyboardInterrupt termination of the tool is not working properly. The tool does not terminate when the user presses `Ctrl+C` in the console. The tool terminates only when the user presses `Ctrl+C` in the console multiple times.
+3. KeyboardInterrupt termination of the tool is not working properly. The tool does not terminate when the user presses `Ctrl+C` in the console. The tool terminates only when the user presses `Ctrl+C` in the console multiple times.
