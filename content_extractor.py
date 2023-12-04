@@ -164,7 +164,7 @@ class ContentExtractor:
 
         try:
             # Use newspaper library to extract content from the HTML
-            article = self.extract_article(url, response, language)
+            article = self.extract_article(response, language)
             logging.info(f"{url}: content extracted")
             
             # Process and clean the extracted content
