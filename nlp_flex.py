@@ -30,13 +30,12 @@ def nlp_flex(config_file_path):
     pub_date_col_name = config.get('General', 'pub_date_col_name')
     
     if mode in {'openai', 'all'}:
-        openai_api_key = config.get('OpenAI', 'openai_api_key')
         openai_model = config.get('OpenAI', 'openai_model')
         openai_temp = config.getfloat('OpenAI', 'openai_temp')
         openai_max_tokens = config.getint('OpenAI', 'openai_max_tokens') 
         
         # Initialize ContentExtractor
-        extractor = ContentExtractor(openai_api_key, openai_model, openai_temp, openai_max_tokens)
+        extractor = ContentExtractor(openai_model, openai_temp, openai_max_tokens)
     
     elif mode == 'extractor': extractor = ContentExtractor()
     
