@@ -46,7 +46,6 @@ os.environ['REQUESTS_CA_BUNDLE'] = 'cacert.pem' #'NRCAN-Root-2019-B64.cer'
 # Set OpenAI API key
 # client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY")) # for openai=1.3.0
 openai.api_key = os.getenv('OPENAI_API_KEY')
-print(openai.api_key)
 
 class ContentExtractor:
     def __init__(self, openai_model="gpt-3.5-turbo", openai_temp=0.8, openai_max_tokens=100):
@@ -349,7 +348,7 @@ class ContentExtractor:
             # Pause for 60 seconds to avoid API rate limits
             time.sleep(60)
 
-            return  openai_content #content_df # openai_content #
+            return  content_df # openai_content #
 
         except Exception as e:
             # Handle any unexpected errors
@@ -467,7 +466,7 @@ class ContentExtractor:
             # Check and append columns
             openai_content_df = self.check_and_append_columns(openai_content_df, ncol=len(column_names))
             openai_content_df.columns = column_names
-
+        
             return openai_content_df
 
         except Exception as e:
