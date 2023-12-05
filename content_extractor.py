@@ -19,6 +19,9 @@ from datetime import datetime
 from signal import signal, SIGINT
 import time
 
+from dotenv import load_dotenv
+load_dotenv()
+
 from utils import handler, LOGGING_CONFIG
 
 # Configure logging
@@ -40,11 +43,13 @@ OUTPUT_FOLDER_PATH = "output"
 old_merge_environment_settings = requests.Session.merge_environment_settings
 os.environ['REQUESTS_CA_BUNDLE'] = 'cacert.pem' #'NRCAN-Root-2019-B64.cer'
 
+# Set OpenAI API key
+# client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY")) # for openai=1.3.0
+openai.api_key = os.getenv('OPENAI_API_KEY')
+print(openai.api_key)
+
 class ContentExtractor:
-    def __init__(self, openai_api_key = "", openai_model="gpt-3.5-turbo", openai_temp=0.8, openai_max_tokens=100):
-        # Set OpenAI API key
-        openai.api_key = openai_api_key 
-        
+    def __init__(self, openai_model="gpt-3.5-turbo", openai_temp=0.8, openai_max_tokens=100):
         # Set OpenAI parameters
         self.openai_model = openai_model
         self.openai_temp = openai_temp
@@ -350,7 +355,6 @@ class ContentExtractor:
             # Handle any unexpected errors
             logger.error(f"An error occurred during extraction: {str(e)}")
             return pd.DataFrame()  # Return an empty DataFrame in case of an error
-
 
     def prepare_messages(self, language, url_content):
         """Prepare system and user messages based on the language.
