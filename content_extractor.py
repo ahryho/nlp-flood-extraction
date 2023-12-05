@@ -508,8 +508,7 @@ class ContentExtractor:
             with multiprocessing.Pool(processes=num_processes) as pool:
                 results = pool.starmap(
                     self.extract_single_event_chatopenai,
-                    zip(df['New_Content'], df['URL'], df['Language'], df['PublishedDate'], 
-                        model_args, temp_args, tokens_args)
+                    zip(df['New_Content'], df['URL'], df['Language'], df['PublishedDate'])
                 )
 
             # Combine results into a single DataFrame
