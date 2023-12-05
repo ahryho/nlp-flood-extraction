@@ -22,6 +22,7 @@ The tool consists of the following files:
 * `data`: Folder containing input files for the tool.
 * `output`: Folder containing results files for the tool.
 * `logs`: Folder containing log files for the tool. Please, note that the log files are not included in the repository, but they are generated and stored locally on the user's machine.
+* `tests`: Folder containing unit tests for the tool.
 
 ### Requirements
 
@@ -54,9 +55,22 @@ The tool consists of the following files:
 4. Activate the Conda environment:
 
     ```bash
-    conda activate nlp_flood_extract_env
+    conda activate nlp_flood_extract_envgit a
     ```
-   
+
+## Setup your OpenAI API key
+
+1. Create an account on the [OpenAI platform](https://platform.openai.com/).
+2. Create an API key on the [OpenAI platform](https://platform.openai.com/api-keys).
+3. In the project directory, create a file named `.env` and add your OpenAI API key to it:
+
+    ```bash
+    OPENAI_API_KEY=sk-...
+    ```
+You are now ready to use the tool.
+
+**Note**: The `.env` file is included in the `.gitignore` file, so it will not be pushed to the repository.
+
 ## Usage
 
 Run the tool by executing the `nlp_flex.py` script with the path to the configuration file:
@@ -79,7 +93,6 @@ url_col_name = URL   ; Name of the column with URLs
 pub_date_col_name = PublishedDate  ; Name of the column with dates when the articles was published
 
 [OpenAI]
-openai_api_key = sk-                 ; OpenAI API key
 openai_model = gpt-3.5-turbo-1106    ; OpenAI model name
 openai_temp = 0.85                   ; Temperature for OpenAI response
 openai_max_tokens = 200              ; Maximum tokens for OpenAI response
