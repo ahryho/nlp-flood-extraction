@@ -7,7 +7,7 @@ import os
 from signal import signal, SIGINT
 from datetime import datetime
 
-LOG_FILE_PATH='log'
+LOG_FILE_PATH='logs'
 LOG_NAME=f"nlp_flex_{datetime.now().strftime('%Y-%m-%d_%H-%M')}.log"
 
 # Check if the log path exists, and create the directory if it doesn't
