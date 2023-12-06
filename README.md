@@ -55,7 +55,7 @@ The tool consists of the following files:
 4. Activate the Conda environment:
 
     ```bash
-    conda activate nlp_flood_extract_envgit a
+    conda activate nlp_flood_extract_env
     ```
 
 ## Setup your OpenAI API key
