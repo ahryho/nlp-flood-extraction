@@ -186,6 +186,9 @@ pyrightconfig.json
 output/
 logs/
 
+# Input folder
+data/
+
 # Sensitive files
 cacert.pem
 config/test.ini
