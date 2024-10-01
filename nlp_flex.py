@@ -29,15 +29,16 @@ def nlp_flex(config_file_path):
     url_col_name = config.get('General', 'url_col_name')
     pub_date_col_name = config.get('General', 'pub_date_col_name')
     
-    if mode in {'openai', 'all'}:
-        openai_model = config.get('OpenAI', 'openai_model')
-        openai_temp = config.getfloat('OpenAI', 'openai_temp')
-        openai_max_tokens = config.getint('OpenAI', 'openai_max_tokens') 
+    if mode in {'nlp', 'all'}:
+        solution = config.get('NLP', 'solution')
+        model = config.get('NLP', 'model')
+        temp = config.getfloat('NLP', 'temp')
+        max_tokens = config.getint('NLP', 'max_tokens') 
         
         # Initialize ContentExtractor
-        extractor = ContentExtractor(openai_model, openai_temp, openai_max_tokens)
+        extractor = ContentExtractor(solution, model, temp, max_tokens)
     
-    elif mode == 'extractor': extractor = ContentExtractor()
+    elif mode == 'extractor': extractor = ContentExtractor(solution = "")
     
     else:
         logging.error("The provided mode is not recognized.")
@@ -51,13 +52,13 @@ def nlp_flex(config_file_path):
         # Extract content using ContentExtractor
         extractor.extract_content(data_df, num_processes=num_processes, out_fn=output_filename)
 
-    elif mode == 'openai':
-        # Mode: OpenAI
+    elif mode == 'nlp':
+        # Mode: NLP
         # Filter valid articles from the data
         filtered_df = extractor.filter_scraped_data(data_df)
 
         # Extract flood events using OpenAI
-        extractor.extract_events_chatopenai(filtered_df,  num_processes=num_processes, out_fn=output_filename)
+        extractor.extract_events_chatopenai(filtered_df, num_processes=num_processes, out_fn=output_filename)
 
     elif mode == 'all':
         # Mode: All
@@ -66,7 +67,7 @@ def nlp_flex(config_file_path):
         filtered_df = extractor.filter_scraped_data(extracted_df)
 
         # Extract flood events using OpenAI
-        extractor.extract_events_chatopenai(filtered_df,  num_processes=num_processes, out_fn=output_filename)
+        extractor.extract_events_chatopenai(filtered_df, num_processes=num_processes, out_fn=output_filename)
          
 if __name__ == "__main__":
     # Define command-line arguments
