@@ -8,11 +8,13 @@ import pandas as pd
 import requests
 import newspaper
 from newspaper import Article
+from bs4 import BeautifulSoup
 import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 import multiprocessing
 import openai
+import boto3
 import logging
 import logging.handlers
 from datetime import datetime
@@ -22,7 +24,8 @@ import time
 from dotenv import load_dotenv
 load_dotenv()
 
-from utils import handler, LOGGING_CONFIG
+from utils_bedrock import handler, LOGGING_CONFIG
+from utils_bedrock import check_brackets_balance, correct_brackets
 
 # Configure logging
 # logging.basicConfig(level=logging.INFO)
@@ -41,18 +44,38 @@ OUTPUT_FOLDER_PATH = "output"
 
 # Override SSL verification settings
 old_merge_environment_settings = requests.Session.merge_environment_settings
-os.environ['REQUESTS_CA_BUNDLE'] = 'cacert.pem' #'NRCAN-Root-2019-B64.cer'
+os.environ['REQUESTS_CA_BUNDLE'] = 'C:/Users/ahryhorz/dev/certificates/cacert.pem' # 'cacert.pem' #'NRCAN-Root-2019-B64.cer'
+os.environ['CURL_CA_BUNDLE'] = 'C:/Users/ahryhorz/dev/certificates/cacert.pem'
+os.environ['AWS_CA_BUNDLE'] = 'C:/Users/ahryhorz/dev/certificates/cacert.pem'
+os.environ['SSL_CERT_FILE'] = 'C:/Users/ahryhorz/dev/certificates/cacert.pem'
+os.environ['SSL_CERTIFICATE'] = 'C:/Users/ahryhorz/dev/certificates/cacert.pem'
 
 # Set OpenAI API key
 # client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY")) # for openai=1.3.0
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
+aws_access_key_id = os.getenv('AWS_ACCESS_KEY_ID')
+aws_secret_access_key = os.getenv('AWS_SECRET_ACCESS_KEY')
+aws_session_token = os.getenv('AWS_SESSION_TOKEN')
+aws_region = os.getenv('AWS_REGION')
+
+# Initialize the boto3 session and Bedrock client
+session = boto3.Session(
+    region_name=aws_region,
+    aws_access_key_id=aws_access_key_id,
+    aws_secret_access_key=aws_secret_access_key,
+    aws_session_token=aws_session_token
+)
+
+bedrock_client = session.client('bedrock-runtime')
+
 class ContentExtractor:
-    def __init__(self, openai_model="gpt-3.5-turbo", openai_temp=0.8, openai_max_tokens=100):
+    def __init__(self, solution = "bedrock", model="mistral.mistral-7b-instruct-v0:2", temp=0.8, max_tokens=512):
         # Set OpenAI parameters
-        self.openai_model = openai_model
-        self.openai_temp = openai_temp
-        self.openai_max_tokens = openai_max_tokens
+        self.solution = solution
+        self.model = model
+        self.temp = temp
+        self.max_tokens = max_tokens
         
         # Download stopwords and punkt if not already present
         nltk.download('stopwords', quiet=True)
@@ -60,7 +83,27 @@ class ContentExtractor:
         
         # Get the set of English stopwords
         self.stop_words = set(stopwords.words('english'))
+
+        # Delete when the permanenet AWS credentials are received
+        if (self.solution == "bedrock"):
+            # print(f"Welcome to AWS Bedrock. The URLs will be processed using {model} model.")
+            try:
+                bedrock_client.invoke_model(
+                    body='{"prompt": "Hello, Bedrock!"}',
+                    modelId=model)
+                print(f"Welcome to AWS Bedrock. The URLs will be processed using {model} model.")
+            except boto3.exceptions.Boto3Error as e:
+                # An exception was raised, so the credentials are invalid for Bedrock
+                raise ValueError(f"Error: Invalid AWS credentials for Bedrock: {str(e)}.")
+            
+        elif (self.solution == "openai"):
+            print(f"Welcome to OpenAI. The URLs will be processed using {model} model.")
         
+        elif (self.solution == ""):
+            print("The solution wasn't provided. If you don't use the Extractor mode, please interupt the program and modify the config file.")
+        else:
+            print("Ooooo... the solution you requested doesn't exist. Please check you config file.")
+
     def read_data(self, fn, url_col_name="LinkURI", pub_date_col_name="PublishedDate"):
         """Reads data from a CSV file.
 
@@ -90,6 +133,11 @@ class ContentExtractor:
         df.rename(columns={url_col_name: "URL"}, inplace=True)
         df.rename(columns={pub_date_col_name: "PublishedDate"}, inplace=True)
         
+        # Remove duplicate rows: the column "Alert definition" may contains different values for thesame URL
+        # Therefore, we drop off the column and remove duplicates
+        if 'Alert_definition' in df.columns:
+            df = df.drop(['Alert_definition'], axis=1).drop_duplicates()
+
         # Additional error handling for an empty dataframe
         if df.empty:
             raise ValueError("The CSV file is empty. Please provide a valid non-empty CSV file.")
@@ -168,14 +216,29 @@ class ContentExtractor:
             return summary, content, is_valid
 
         try:
-            # Use newspaper library to extract content from the HTML
-            article = self.extract_article(response, language)
+            if self.check_for_captcha(response):
+                soup = BeautifulSoup(response.content, features='html.parser')
+
+                paragraphs = soup.find_all('p')
+                
+                # Extract and print the text within the <p> tags
+                for p in paragraphs:
+                    content += p.text
+                is_valid = 1 if self.is_valid_body(content) else 0 
+
+            else:
+                # Use newspaper library to extract content from the HTML
+                article = self.extract_article(response, language)
+                summary = article.summary
+                content = article.text
+                is_valid = 1 if article.is_valid_body() else 0
+   
             logging.info(f"{url}: content extracted")
             
             # Process and clean the extracted content
-            summary = self.clean_text(article.summary)
-            content = self.clean_text(article.text)
-            is_valid = 1 if article.is_valid_body() else 0
+            summary = self.clean_text(summary)
+            content = self.clean_text(content)
+            
         except Exception as e:
             logging.error(f"An error occurred during content extraction: {str(e)}")
 
@@ -213,12 +276,53 @@ class ContentExtractor:
         Returns:
             newspaper.Article: Article object.
         """
+        
         article = newspaper.Article(url='', language=language)
         article.download(input_html=response.content)
         article.parse()
         article.nlp()
 
         return article
+    
+    def check_for_captcha(self, response):
+        """Check if the given page content of the URL contains signs of a CAPTCHA challenge.
+
+        This function analyzes the page content for keywords commonly associated with CAPTCHA challenges, 
+        such as "captcha", "recaptcha", and "g-recaptcha". These terms are often used in CAPTCHA systems like 
+        Google's reCAPTCHA and other CAPTCHA services.
+
+        Args:
+            response (requests.Response): The Response from the GET request to check for CAPTCHA.
+
+        Returns:
+            bool: Returns True if the page contains signs of CAPTCHA, False otherwise.
+        """
+
+        # Convert response content to lowercase for easier searching
+        content = response.text.lower()
+
+        # Common patterns in CAPTCHA pages
+        captcha_keywords = ['captcha', 'recaptcha', 'g-recaptcha', 'cf-challenge']
+
+        # Check if any of the common CAPTCHA keywords are in the page content
+        if any(keyword in content for keyword in captcha_keywords):
+            return True
+        else:
+            return False
+
+    def is_valid_body(self, content, min_length=200):
+        """
+        Check if the given content is a valid article body.
+        
+        Args:
+            content (str): The article content to be validated.
+            min_length (int): The minimum length of the article text to be considered valid.
+            
+        Returns:
+            bool: True if the content is considered valid, False otherwise.
+        """
+        # Strip whitespace and check the length of the content
+        return len(content.strip()) >= min_length
 
     def extract_content(self, df, num_processes=None, out_fn=None):
         """Extracts content in parallel from URLs in the dataframe.
@@ -318,7 +422,7 @@ class ContentExtractor:
         return df
 
     def extract_single_event_chatopenai(self, url_content, url, language, publish_date):
-        """Extracts information for a single event using OpenAI API.
+        """Extracts information for a single event using OpenAI or AWS Bedrock API.
 
         Args:
             url_content (str): Content of the URL.
@@ -330,23 +434,36 @@ class ContentExtractor:
             pd.DataFrame: Dataframe with extracted information.
         """
         try:
-            logger.info(f"OpenAI is extracting information from {url}")
+            if (self.solution == "openai"):
+                logger.info(f"OpenAI is extracting information from {url}")
 
-            # Define system and user messages based on the language
-            system_msg, user_msg = self.prepare_messages(language, url_content)
+                # Define system and user messages based on the language
+                system_msg, user_msg = self.prepare_messages(language, url_content)
 
-            # Make an OpenAI API call
-            openai_content = self.make_openai_call(system_msg, user_msg)
+                # Make an OpenAI API call
+                openai_content = self.make_openai_call(system_msg, user_msg)
 
-            # Transform OpenAI response to DataFrame
-            content_df = self.transform_openai_response_to_df(openai_content)
+                # Transform OpenAI response to DataFrame
+                content_df = self.transform_openai_response_to_df(openai_content)
+
+                # Pause for 60 seconds to avoid API rate limits
+                time.sleep(60)
+            
+            elif (self.solution == "bedrock"):
+                logger.info(f"AWS Bedrock model {self.model} is extracting information from {url}")
+
+                # Define system and user messages based on the language
+                msg = self.prepare_messages_bedrock(language, url_content)
+
+                # Make a Bedrock call
+                bedrock_content = self.make_bedrock_call(msg)
+
+                # Transform Bedrock response to DataFrame
+                content_df = self.transform_bedrock_response_to_df(bedrock_content)
 
             # Add metadata to the DataFrame
             content_df["link"] = url
             content_df["published_date"] = publish_date
-
-            # Pause for 60 seconds to avoid API rate limits
-            time.sleep(60)
 
             return  content_df # openai_content #
 
@@ -394,6 +511,72 @@ class ContentExtractor:
             raise ValueError("The provided mode is not recognized.")
 
         return system_msg, user_msg
+    
+    def prepare_messages_bedrock(self, language, url_content):
+        """Prepare system and user messages based on the language.
+
+        Args:
+            language (str): Language code ('en' or 'fr').
+            url_content (str): Context from the URL.
+
+        Returns:
+            list: System message and user message.
+        """
+        if language == 'en':
+            questions = [
+                "1. Did a flood event occur? (Respond with 'Yes' or No' only. If the answer is 'No', mark the following questions as 'NA'.)",
+                "2. If a flood event occurred, what caused the flood event? (Specify the cause or mark as Unknown)",
+                "3. If a flood event occurred, when did it happen? (Specify in YYYY-MM format or mark as Unknown)",
+                "4. If a flood event occurred, where did it happen? (Specify the names all affected places only, separated by commas. or mark as Unknown)",
+                "5. Did any casualties occur if a flood event took place? (Yes or No or mark as Unknown)",
+                "6. Did evacuation take place if a flood event occurred? (Yes or No or mark as Unknown)",
+                "7. If the locations of the flood-affected areas are known, specify the country they are in? (or mark as Unknown)"
+            ]
+
+            user_msg = f"""
+                You are a helpful assistant. You answer all the questions based on the provided content only. Keep the answer concise.
+                Your responses consist of valid JSON syntax, with no other comments, explanations, reasoning, or dialogue that do not consist of valid JSON. 
+                Each key is the question number. You do not include the questions themselves. 
+                Each value is the corresponding answer.
+                Each key-value pair should be enclosed in curly braces, and each key and value should be enclosed in double-quotes.
+
+                Content: {url_content}
+
+                Questions: {questions}
+            """
+
+            msg = [{"role": "user", "content": [{"text": user_msg}]}] 
+
+        elif language == 'fr':
+            system_msg = "Vous êtes un assistant fournissant des réponses utiles. Vous répondez à toutes les questions. Vos réponses consistent en une syntaxe JSON valide, sans autres commentaires, explications, raisonnements ou dialogues qui ne sont pas constitués de syntaxe JSON valide. Chaque clé est le numéro de la question. N'incluez pas les questions elles-mêmes. Chaque valeur est la réponse correspondante. Chaque paire clé-valeur doit être enfermée dans des accolades, et chaque clé et valeur doivent être enfermées entre guillemets."
+            questions = [
+                "1. Est-ce qu'un événement d'inondation s'est produit ? (Oui ou Non seulement. Si la réponse est 'Non', marquez les questions suivantes comme 'NA'.)",
+                "2. Si un événement d'inondation s'est produit, quelle en était la cause ? (Spécifiez la cause ou marquez comme Inconnu)",
+                "3. Si un événement d'inondation s'est produit, quand s'est-il produit ? (Spécifiez au format AAAA-MM ou marquez comme Inconnu)",
+                "4. Si un événement d'inondation s'est produit, où s'est-il produit ? (Spécifiez tous les endroits affectés ou marquez comme Inconnu))",
+                "5. Y a-t-il eu des victimes en cas d'inondation? (Oui ou Non ou marquer comme Inconnu)",
+                "6. Est-ce qu'une évacuation a eu lieu en cas d'inondation ? (Oui, Non ou marquer comme Inconnu)",
+                "7. Si les emplacements des zones touchées par l'inondation sont connus, spécifiez le pays dans lequel ils se trouvent? (ou marquez comme Inconnu)"
+            ]
+
+            user_msg = f"""
+                Vous êtes un assistant fournissant des réponses utiles. Vous répondez à toutes les questions. Gardez la réponse concise.
+                Vos réponses consistent en une syntaxe JSON valide, sans autres commentaires, explications, raisonnements ou dialogues qui ne sont pas constitués de syntaxe JSON valide. 
+                Chaque clé est le numéro de la question. N'incluez pas les questions elles-mêmes. 
+                Chaque valeur est la réponse correspondante.
+                Chaque paire clé-valeur doit être enfermée dans des accolades, et chaque clé et valeur doivent être enfermées entre guillemets.
+                            
+                Le contenu: {url_content}
+
+                Questions: {questions}
+            """
+
+            msg = [{"role": "user", "content": [{"text": user_msg}]}] 
+        else:
+            logging.error("The provided mode is not recognized.")
+            raise ValueError("The provided mode is not recognized.")
+
+        return msg
 
     def make_openai_call(self, system_msg, user_msg):
         """Make an OpenAI API call based on the chosen model.
@@ -406,24 +589,24 @@ class ContentExtractor:
             str: OpenAI response content.
         """
         try:
-            if self.openai_model in ["gpt-3.5-turbo", "gpt-3.5-turbo-1106"]:
+            if self.model in ["gpt-3.5-turbo", "gpt-3.5-turbo-1106"]:
                 response = openai.ChatCompletion.create(
-                    model=self.openai_model,
+                    model=self.model,
                     messages=[
                         {"role": "system", "content": system_msg},
                         {"role": "user", "content": user_msg}
                     ],
-                    max_tokens=self.openai_max_tokens,
-                    temperature=self.openai_temp
+                    max_tokens=self.max_tokens,
+                    temperature=self.temp
                 )
                 openai_content = response["choices"][0]["message"]["content"]
             else:
                 prompt = system_msg + '\n' + user_msg
                 response = openai.Completion.create(
-                    model=self.openai_model,
+                    model=self.model,
                     prompt=prompt,
-                    max_tokens=self.openai_max_tokens,
-                    temperature=self.openai_temp
+                    max_tokens=self.max_tokens,
+                    temperature=self.temp
                 )
                 openai_content = response['choices'][0]['text']
 
@@ -434,17 +617,49 @@ class ContentExtractor:
             logger.error(f"An error occurred during the OpenAI API call: {str(e)}")
             raise
     
-    def transform_openai_response_to_df(self, openai_content):
-        """Transforms OpenAI response into a dataframe.
+    def make_bedrock_call(self, msg):
+        """Make an AWS Bedrock call based on the chosen model.
 
         Args:
-            openai_content (str): OpenAI response content.
+            system_msg (str): System message for AWS Bedrock.
+            user_msg (str): User message for AWS Bedrokck.
 
         Returns:
-            pd.DataFrame: Dataframe with transformed OpenAI content.
+            str: AWS Bedrock response content.
         """
         try:
-            if self.openai_model in ["gpt-3.5-turbo", "gpt-3.5-turbo-1106"]:
+            params = {
+                "modelId": self.model,
+                "messages": msg,
+                "inferenceConfig": {
+                    "temperature": self.temp,
+                    "maxTokens": self.max_tokens}
+                }
+
+            # Invoke the Bedrock model
+            response = bedrock_client.converse(**params)
+
+            # Parse the response           
+            bedrock_content = response["output"]["message"]["content"][0]["text"]
+
+            return bedrock_content
+
+        except Exception as e:
+            # Handle any unexpected errors during the OpenAI API call
+            logger.error(f"An error occurred during the AWS Bedrock call: {str(e)}")
+            raise
+
+    def transform_openai_response_to_df(self, openai_content):
+        """Transforms OpenAI/AWS Bedrock response into a dataframe.
+
+        Args:
+            openai_content (str): OpenAI/AWS Bedrock response content.
+
+        Returns:
+            pd.DataFrame: Dataframe with transformed OpenAI/AWS Bedrock content.
+        """
+        try:
+            if self.model in ["gpt-3.5-turbo", "gpt-3.5-turbo-1106"]:
                 # Replace newline characters and leading/trailing spaces
                 openai_content = ''.join(char for char in openai_content if char.isprintable())
             else:
@@ -486,8 +701,52 @@ class ContentExtractor:
 
             return openai_content_df
 
-    def extract_events_chatopenai(self, df, num_processes=None, out_fn=None): #, openai_model="gpt-3.5-turbo", openai_temp=0.8, openai_max_tokens=150, out_fn=None):
-        """Extracts information for multiple events using OpenAI API.
+    def transform_bedrock_response_to_df(self, content):
+        """Transforms AS Bedrock response into a dataframe.
+
+        Args:
+            content (str): AWS Bedrock response content.
+
+        Returns:
+            pd.DataFrame: Dataframe with transformed AWS Bedrock content.
+        """
+        try:
+            is_balanced, unmatched = check_brackets_balance(content)
+
+            if not is_balanced:
+                content = correct_brackets(content)
+
+            content_dict = json.loads(content)
+            content_df = pd.DataFrame([content_dict])
+
+            # Define column names
+            column_names = ["is_happened", "flood_cause_en", "date", "location", "death", "evacuation", "country"]
+
+            # Check and append columns
+            content_df = self.check_and_append_columns(df=content_df, ncol=len(column_names))
+            content_df.columns = column_names
+                
+            return content_df
+
+        except Exception as e:
+            # Handle any unexpected errors and print a helpful message
+            logger.error(f"An error occurred during transformation: {str(e)}")
+
+            # Provide a default structure in case of an error
+            json_string = {'is_happened': content}
+            content_df = pd.DataFrame(json_string)
+
+            # Define column names
+            column_names = ["is_happened", "flood_cause_en", "date", "location", "death", "evacuation", "country"]
+
+            # Check and append columns for default structure
+            content_df = self.check_and_append_columns(content_df, ncol=len(column_names))
+            content_df.columns = column_names
+
+            return content_df
+
+    def extract_events_chatopenai(self, df, num_processes=None, out_fn=None): #, model="gpt-3.5-turbo", temp=0.8, max_tokens=150, out_fn=None):
+        """Extracts information for multiple events using OpenAI or AWS Bedrock API.
 
         Args:
             df (pd.DataFrame): Dataframe with content and URLs.
@@ -503,9 +762,9 @@ class ContentExtractor:
                 num_processes = multiprocessing.cpu_count() - 1
 
             # Prepare arguments for parallel processing
-            model_args = [self.openai_model] * df.shape[0]
-            temp_args = [self.openai_temp] * df.shape[0]
-            tokens_args = [self.openai_max_tokens] * df.shape[0]
+            model_args = [self.model] * df.shape[0]
+            temp_args = [self.temp] * df.shape[0]
+            tokens_args = [self.max_tokens] * df.shape[0]
 
             # Use multiprocessing for parallel extraction
             with multiprocessing.Pool(processes=num_processes) as pool:
@@ -537,7 +796,7 @@ class ContentExtractor:
                 
                 # Get the current date and time    
                 current_datetime = datetime.now().strftime('%Y-%m-%d_%H%M%S') 
-                out_fn = f"openai_results_{current_datetime}.csv"
+                out_fn = f"nlp_results_{current_datetime}.csv"
                 out_fn = os.path.join(OUTPUT_FOLDER_PATH, out_fn)
                 results_df.to_csv(out_fn, index=False, sep='|')
             logging.info("Saved.")
