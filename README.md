@@ -140,3 +140,11 @@ The tool logs information, warnings, and errors to the console and a log file wi
 2. The tool uses the free plan of the [OpenAI API](https://platform.openai.com/account/limits), which allows 3 requests per minute, RPM. To address this limitation, the tool uses a 'sleep' request of 60 seconds. This is not ideal, but it is the only way to avoid the error: "Too many requests. Please wait for a minute before making a new request." The tool can be modified to use a different plan to increase the number of requests per minute. While this mitigates RPM constraints, it does not address the daily API call limit. 
 
 3. To terminate the tool, the user must press `Ctrl+C` in the console. Due to the use of multiprocessing, it takes some time to terminate all processes. The user can monitor the number of processes that are still running in the console. The tool will only terminate when all existing processes are completed. Sometimes, the tool does not terminate properly, and the user must press `Ctrl+C` multiple times to terminate the tool.
+
+## Additional information
+
+For additional information, questions, suggestions, please contact the owner of this repository.
+
+## Authors
+
+[Anastasiia Hryhorzhevska](https://www.linkedin.com/in/ahryhorzhevska)
