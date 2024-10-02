@@ -13,7 +13,7 @@ This tool provides functionality for extracting and processing content from URLs
         - meta.llama3-8b-instruct-v1:0
         - meta.llama3-70b-instruct-v1:0
 
-* **All Mode**: Combines the features of both Extractor and OpenAI modes, extracting content and filtering valid articles before extracting flood event information using OpenAI.
+* **All Mode**: Combines the features of both Extractor and NLP modes, extracting content and filtering valid articles before extracting flood event information using OpenAI or Bedrock.
 
 ## Getting Started
 
