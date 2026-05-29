@@ -1,4 +1,4 @@
-# NLP Flood Extraction Tool
+# flood-nlp-miner: NLP-based tool for automated extraction of flood-event information from unstructured historical records
 
 This tool provides functionality for extracting and processing content from URLs using the OpenAI and AWS Bedrock APIs. The tool is designed to handle URL content processing in different modes, including:
 
